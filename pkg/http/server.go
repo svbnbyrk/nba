@@ -4,13 +4,9 @@ import (
 	"context"
 	"net/http"
 	"time"
-)
 
-const (
-	readTimeout     = 10 * time.Second
-	writeTimeout    = 10 * time.Second
-	addr            = ":8081"
-	shutdownTimeout = 5 * time.Second
+	"github.com/spf13/viper"
+	"github.com/svbnbyrk/nba/config"
 )
 
 // Server
@@ -24,15 +20,15 @@ type Server struct {
 func New(handler http.Handler) *Server {
 	httpServer := &http.Server{
 		Handler:      handler,
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
-		Addr:         addr,
+		ReadTimeout:  viper.GetDuration(config.HTTP_SERVER_TIMEOUT_READ),
+		WriteTimeout: viper.GetDuration(config.HTTP_SERVER_TIMEOUT_WRITE),
+		Addr:         viper.GetString(config.HTTP_SERVER_PORT),
 	}
 
 	s := &Server{
 		server:          httpServer,
 		notify:          make(chan error, 1),
-		shutdownTimeout: shutdownTimeout,
+		shutdownTimeout: viper.GetDuration(config.HTTP_SERVER_TIMEOUT_SHUTDOWN),
 	}
 
 	s.start()

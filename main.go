@@ -10,13 +10,14 @@ import (
 
 type Player struct {
 	Name               string
+	TeamID             int
 	TwoPointAttempts   int
 	TwoPointMade       int
 	ThreePointAttempts int
 	ThreePointMade     int
 }
 
-type Match struct {
+type Game struct {
 	Team1  []Player
 	Team2  []Player
 	Score1 int
@@ -33,7 +34,7 @@ type TeamStats struct {
 var teamStats = make(map[string]*TeamStats)
 var mutex = &sync.Mutex{}
 
-func simulateMatch(matchID int, match Match, team1Name string, team2Name string, updates chan<- string, wg *sync.WaitGroup) {
+func simulateMatch(matchID int, match Game, team1Name string, team2Name string, updates chan<- string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for minute := 0; minute < 48; minute++ {
@@ -52,7 +53,7 @@ func simulateMatch(matchID int, match Match, team1Name string, team2Name string,
 		mutex.Unlock()
 
 		// Skoru güncelle
-		updates <- fmt.Sprintf("Match %d: %s vs %s | Score: %d - %d", matchID, team1Name, team2Name, match.Score1, match.Score2)
+		fmt.Printf("Match %d: %s vs %s | Score: %d - %d\n", matchID, team1Name, team2Name, match.Score1, match.Score2)
 
 		time.Sleep(1 * time.Second)
 	}
@@ -86,7 +87,7 @@ func simulateAttack(player Player) (int, Player) {
 
 	if attackType == 0 {
 		player.TwoPointAttempts++
-		if rand.Float32() < 0.78 { // Basit bir başarı olasılığı
+		if rand.Float32() < 0.65 { // Basit bir başarı olasılığı
 			player.TwoPointMade++
 			return 2, player
 		} else {
@@ -94,7 +95,7 @@ func simulateAttack(player Player) (int, Player) {
 		}
 	} else if attackType == 1 {
 		player.ThreePointAttempts++
-		if rand.Float32() < 0.59 { // Basit bir başarı olasılığı
+		if rand.Float32() < 0.40 { // Basit bir başarı olasılığı
 			player.ThreePointMade++
 			return 3, player
 		} else {
@@ -105,7 +106,7 @@ func simulateAttack(player Player) (int, Player) {
 }
 
 // Takım istatistiklerini güncelleme fonksiyonu
-func updateStats(teamName string, team1 []Player, team2 []Player, match Match) {
+func updateStats(teamName string, team1 []Player, team2 []Player, match Game) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -146,31 +147,26 @@ func printSortedStats() {
 }
 
 func main() {
-	// Takım ve oyuncu bilgilerini başlat
+	// GetGames by week
 	team1 := []Player{{Name: "Alperen Sengun"}, {Name: "Lebron James"}, {Name: "Luka Doncic"}, {Name: "Damien  Lillard"}, {Name: "Antony Edward"}}
 	team2 := []Player{{Name: "Joel Embid"}, {Name: "Jokic"}, {Name: "Jalen Bronsun"}, {Name: "Giannis Antetekunto"}, {Name: "Tyres Maxey"}}
 	// Diğer takımlar ve oyuncular...
 	teamStats["Team East"] = &TeamStats{Team: "Team East", Players: team1}
 	teamStats["Team West"] = &TeamStats{Team: "Team West", Players: team2}
 
-	matches := []Match{
+	matches := []Game{
 		{Team1: team1, Team2: team2},
 		//{Team1: "Team C", Team2: "Team D"},
 		// Diğer maçlar...
 	}
 	var wg sync.WaitGroup
-	updates := make(chan string, len(matches)*48)
+	updates := make(chan string, len(matches))
 
+	// create go func every game
 	for i, match := range matches {
 		wg.Add(1)
 		go simulateMatch(i+1, match, "Team East", "Team West", updates, &wg)
 	}
-
-	go func() {
-		for update := range updates {
-			fmt.Println(update)
-		}
-	}()
 
 	wg.Wait()
 	close(updates)

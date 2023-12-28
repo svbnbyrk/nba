@@ -3,8 +3,9 @@ package mongodb
 import (
 	"context"
 	"fmt"
-	"os"
 
+	"github.com/spf13/viper"
+	"github.com/svbnbyrk/nba/config"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -25,7 +26,7 @@ func New(ctx context.Context, url string) (*MongoDB, error) {
 		return nil, fmt.Errorf("mongo ping err: %w", err)
 	}
 
-	db := client.Database(os.Getenv("DB_NAME"))
+	db := client.Database(viper.GetString(config.DB_NAME))
 
 	return &MongoDB{
 		Client: client,
