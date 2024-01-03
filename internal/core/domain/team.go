@@ -1,19 +1,26 @@
 package domain
 
+import (
+	"gorm.io/gorm"
+)
+
 type Team struct {
-	ID           int        `json:"id" bson:"_id"`
-	Name         string     `json:"name" bson:"name"`
-	Abbreviation string     `json:"abbreviation" bson:"abbreviation"`
-	Players      []Player   `json:"players,omitempty" bson:"-"`
-	Win          int        `json:"win" bson:"win"`
-	Lose         int        `json:"lose" bson:"lose"`
-	Stats        []TeamStat `json:"stats,omitempty" bson:"-"`
+	gorm.Model   `json:"-"`
+	ID           int        `json:"id" gorm:"id"`
+	Name         string     `json:"name" gorm:"name"`
+	Abbreviation string     `json:"abbreviation" gorm:"abbreviation"`
+	Win          int        `json:"win" gorm:"win"`
+	Lose         int        `json:"lose" gorm:"lose"`
+	Players      []Player   `json:"players"`
+	TeamStats    []TeamStat `json:"stats"`
 }
 
 type TeamStat struct {
-	ID           int `json:"id" bson:"_id"`
-	GameID       int `json:"game_id" bson:"game_id"`
-	TeamID       int `json:"team_id" bson:"team_id"`
-	Score        int `json:"score" bson:"team_id"`
-	TotalAttemps int `json:"total_attemps" bson:"total_attemps"`
+	gorm.Model   `json:"-"`
+	ID           int  `json:"id" gorm:"id"`
+	GameID       int  `json:"-" gorm:"game_id"`
+	TeamID       int  `json:"-" gorm:"team_id"`
+	Team         Team `json:"-" gorm:"foreignKey:TeamID"`
+	Score        int  `json:"score" gorm:"score"`
+	TotalAttemps int  `json:"total_attemps" gorm:"total_attemps"`
 }

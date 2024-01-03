@@ -1,4 +1,4 @@
 package domain
 
-type Simulation struct {
+type TeamAttack struct {
 }

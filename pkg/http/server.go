@@ -20,15 +20,15 @@ type Server struct {
 func New(handler http.Handler) *Server {
 	httpServer := &http.Server{
 		Handler:      handler,
-		ReadTimeout:  viper.GetDuration(config.HTTP_SERVER_TIMEOUT_READ),
-		WriteTimeout: viper.GetDuration(config.HTTP_SERVER_TIMEOUT_WRITE),
+		ReadTimeout:  viper.GetDuration(config.HTTP_SERVER_TIMEOUT_READ) * time.Second,
+		WriteTimeout: viper.GetDuration(config.HTTP_SERVER_TIMEOUT_WRITE) * time.Second,
 		Addr:         viper.GetString(config.HTTP_SERVER_PORT),
 	}
 
 	s := &Server{
 		server:          httpServer,
 		notify:          make(chan error, 1),
-		shutdownTimeout: viper.GetDuration(config.HTTP_SERVER_TIMEOUT_SHUTDOWN),
+		shutdownTimeout: viper.GetDuration(config.HTTP_SERVER_TIMEOUT_SHUTDOWN) * time.Second,
 	}
 
 	s.start()

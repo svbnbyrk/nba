@@ -1,12 +1,16 @@
 package domain
 
-import "time"
-
 type Game struct {
-	ID         int  `json:"id" bson:"_id"`
-	AwayTeamID Team `json:"away" bson:"away"`
-	HomeTeamID Team `json:"home" bson:"home"`
+	ID         int  `json:"id" gorm:"id"`
+	AwayTeamID int  `json:"-" gorm:"away_team_id"`
+	AwayTeam   Team `json:"away_team" gorm:"foreignKey:AwayTeamID"`
+	HomeTeamID int  `json:"-" gorm:"home_team_id"`
+	HomeTeam   Team `json:"home_team" gorm:"foreignKey:HomeTeamID"`
+	Week       int  `json:"week" gorm:"week"`
+	IsFinished bool `json:"is_finished" gorm:"is_finished"`
+}
+
+type GameFilter struct {
 	Week       int
-	StartTime  time.Time `json:"start_time" bson:"start_time"`
-	IsFinished bool      `json:"is_finished" bson:"is_finished"`
+	IsFinished bool
 }
