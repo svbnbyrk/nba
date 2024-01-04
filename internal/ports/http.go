@@ -1,7 +1,9 @@
 package ports
 
 import (
+	"context"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -13,7 +15,32 @@ import (
 
 func SimulateHandler(uc usecase.SimulationUsecaseInterface) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		games, _ := uc.StartSimulation(c.Request().Context(), 1)
+		week, err := strconv.Atoi(c.QueryParam("week"))
+		if err != nil {
+			week = 1
+		}
+
+		games, err := uc.StartSimulation(context.Background(), week)
+		if err != nil {
+			return err
+		}
+
+		return c.JSON(http.StatusOK, games)
+	}
+}
+
+func GetGameScheduleHandler(uc usecase.GameUsecaseInterface) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		week, err := strconv.Atoi(c.QueryParam("week"))
+		if err != nil {
+			week = 1
+		}
+
+		games, err := uc.GetGamesByWeek(context.Background(), week)
+		if err != nil {
+			return err
+		}
+
 		return c.JSON(http.StatusOK, games)
 	}
 }

@@ -2,16 +2,18 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"math/rand"
-	"sync"
 	"time"
 
 	"github.com/spf13/viper"
 	"github.com/svbnbyrk/nba/config"
 	"github.com/svbnbyrk/nba/internal/adapters"
 	"github.com/svbnbyrk/nba/internal/core/domain"
+	"gorm.io/gorm"
 )
 
+//go:generate mockgen -destination=./mocks/mock_simulation.go -source=./simulation.go -package=usecase
 type SimulationUsecaseInterface interface {
 	StartSimulation(ctx context.Context, week int) ([]domain.Game, error)
 }
@@ -31,33 +33,39 @@ func NewSimulationUsecase(teamRepo adapters.TeamRepositoryInterface, gameRepo ad
 }
 
 func (uc *SimulationUsecase) StartSimulation(ctx context.Context, week int) ([]domain.Game, error) {
+	finished := false
 	games, err := uc.gameRepo.GetGamesByFilter(ctx, domain.GameFilter{
-		Week: week,
+		Week:       week,
+		IsFinished: &finished,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	var wg sync.WaitGroup
-	gameUpdate := make(chan string, len(games))
-
 	for _, game := range games {
-		wg.Add(1)
-		go uc.simulateGame(ctx, game, gameUpdate, &wg)
+		go uc.simulateGame(ctx, game)
 	}
-
-	wg.Wait()
-	close(gameUpdate)
 
 	return games, nil
 }
 
-func (uc *SimulationUsecase) simulateGame(ctx context.Context, game domain.Game, updates chan<- string, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (uc *SimulationUsecase) simulateGame(ctx context.Context, game domain.Game) {
 	for minute := 0; minute < 48; minute++ {
 		uc.simulateMinute(ctx, game, minute)
 		time.Sleep(viper.GetDuration(config.TIME_FACTOR) * time.Second)
 	}
+	game.IsFinished = true
+	if game.AwayTeam.TeamStats[0].Score > game.HomeTeam.TeamStats[0].Score {
+		game.AwayTeam.Win++
+		game.HomeTeam.Lose++
+	} else if game.AwayTeam.TeamStats[0].Score < game.HomeTeam.TeamStats[0].Score {
+		game.HomeTeam.Win++
+		game.AwayTeam.Lose++
+	}
+
+	_ = uc.gameRepo.UpsertGame(ctx, game)
+	_ = uc.teamRepo.UpsertTeam(ctx, game.AwayTeam)
+	_ = uc.teamRepo.UpsertTeam(ctx, game.HomeTeam)
 }
 
 // simulateMinute simulates a single minute of game time.
@@ -84,6 +92,13 @@ func (uc *SimulationUsecase) getRandomAttackCount() int {
 // Additional logic and error handling might be necessary depending on the implementation details.
 func (uc *SimulationUsecase) simulateTeamAttack(ctx context.Context, team domain.Team, gameID int, attackCount int) error {
 	score := 0
+
+	teamStat, err := uc.teamRepo.GetTeamStat(ctx, domain.TeamStatFilter{GameID: gameID, TeamID: team.ID})
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
 	for i := 0; i < attackCount; i++ {
 		playerIndex := rand.Intn(len(team.Players)) // Rastgele oyuncu seç
 		attackResult, err := uc.simulateAttack(ctx, team.Players[playerIndex], gameID)
@@ -93,55 +108,49 @@ func (uc *SimulationUsecase) simulateTeamAttack(ctx context.Context, team domain
 		score += attackResult
 	}
 
-	return nil
-}
-
-func (uc *SimulationUsecase) ensurePlayerStats(ctx context.Context, player domain.Player, gameID int) (domain.PlayerStat, error) {
-	var playerStats domain.PlayerStat
-	// Assuming that you have a method to get the current game's player stat
-	// Check if there's existing stats, if not, create a new one
-	if len(player.PlayerStats) == 0 {
-		// Handle creation and possible errors properly
-		playerStats.PlayerID = player.ID
-		playerStats.GameID = gameID
-		err := uc.playerRepo.UpsertPlayerStats(ctx, playerStats)
-		if err != nil {
-			return playerStats, err
-		}
-		return playerStats, nil
+	teamStat.TotalAttemps += attackCount
+	teamStat.Score += score
+	teamStat.GameID = gameID
+	teamStat.TeamID = team.ID
+	err = uc.teamRepo.UpsertTeamStat(ctx, teamStat)
+	if err != nil {
+		return err
 	}
-	return player.PlayerStats[0], nil // Assuming that player always has at least one stat
+
+	return nil
 }
 
 func (uc *SimulationUsecase) simulateAttack(ctx context.Context, player domain.Player, gameID int) (attackResult int, err error) {
 	attackType := rand.Intn(2) // 0: 2 puan, 1: 3 puan
-	playerStats, err := uc.ensurePlayerStats(ctx, player, gameID)
-	if err != nil {
+	point := 0
+	playerStat, err := uc.playerRepo.GetPlayerStat(ctx, domain.PlayerStatFilter{GameID: gameID, PlayerID: player.ID})
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return 0, err
+	}
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		playerStat.PlayerID = player.ID
+		playerStat.GameID = gameID
 	}
 
 	if attackType == 0 {
-		playerStats.TwoPointAttempt++
+		playerStat.TwoPointAttempt++
 		if rand.Float32() < 0.65 { // Basit bir başarı olasılığı
-			playerStats.TwoPointMade++
-			return 2, err
-		} else {
-			return 0, err
+			playerStat.TwoPointMade++
+			point = 2
 		}
 	} else if attackType == 1 {
-		playerStats.ThreePointAttempt++
+		playerStat.ThreePointAttempt++
 		if rand.Float32() < 0.40 { // Basit bir başarı olasılığı
-			playerStats.ThreePointMade++
-			return 3, err
-		} else {
-			return 0, err
+			playerStat.ThreePointMade++
+			point = 3
 		}
 	}
 
-	err = uc.playerRepo.UpsertPlayerStats(ctx, playerStats)
-	if err != nil {
+	err = uc.playerRepo.UpsertPlayerStats(ctx, playerStat)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return 0, err
 	}
 
-	return 0, err
+	return point, nil
 }

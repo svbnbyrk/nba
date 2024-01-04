@@ -9,6 +9,7 @@ import (
 
 type PlayerRepositoryInterface interface {
 	UpsertPlayerStats(ctx context.Context, playerStat domain.PlayerStat) error
+	GetPlayerStat(ctx context.Context, filter domain.PlayerStatFilter) (domain.PlayerStat, error)
 }
 
 type PlayerRepository struct {
@@ -27,4 +28,16 @@ func (r *PlayerRepository) UpsertPlayerStats(ctx context.Context, playerStat dom
 	}
 
 	return nil
+}
+
+func (r *PlayerRepository) GetPlayerStat(ctx context.Context, filter domain.PlayerStatFilter) (domain.PlayerStat, error) {
+	var stat domain.PlayerStat
+
+	result := r.Tx.WithContext(ctx).Where("game_id = ? AND player_id = ?", filter.GameID, filter.PlayerID).First(&stat)
+
+	if result.Error != nil {
+		return stat, result.Error
+	}
+
+	return stat, nil
 }

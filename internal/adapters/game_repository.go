@@ -5,11 +5,11 @@ import (
 
 	"github.com/svbnbyrk/nba/internal/core/domain"
 	"github.com/svbnbyrk/nba/pkg/db"
-	"gorm.io/gorm"
 )
 
 type GameRepositoryInterface interface {
 	GetGamesByFilter(ctx context.Context, filter domain.GameFilter) ([]domain.Game, error)
+	UpsertGame(ctx context.Context, game domain.Game) error
 }
 
 type GameRepository struct {
@@ -22,9 +22,36 @@ func NewGameRepository(db *db.Gorm) *GameRepository {
 
 func (r *GameRepository) GetGamesByFilter(ctx context.Context, filter domain.GameFilter) ([]domain.Game, error) {
 	var games []domain.Game
-	result := r.Tx.Preload("AwayTeam").Preload("AwayTeam.TeamStats").Preload("AwayTeam.Players").Preload("AwayTeam.Players.PlayerStats").Preload("HomeTeam").Preload("HomeTeam.TeamStats").Preload("HomeTeam.Players").Preload("HomeTeam.Players.PlayerStats").Where("week = ? AND is_finished = ?", filter.Week, filter.IsFinished).Find(&games)
-	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
-		return nil, result.Error
+	query := r.Tx.Where("week = ?", filter.Week)
+	if filter.IsFinished != nil {
+		query = query.Where("is_finished = ?", filter.IsFinished)
 	}
+
+	if err := query.Find(&games).Error; err != nil {
+		return nil, err
+	}
+
+	for i, game := range games {
+		if err := r.Tx.Preload("AwayTeam.TeamStats", "game_id = ?", game.ID).
+			Preload("AwayTeam.Players").
+			Preload("AwayTeam.Players.PlayerStats", "game_id = ?", game.ID).
+			Preload("HomeTeam.TeamStats", "game_id = ?", game.ID).
+			Preload("HomeTeam.Players").
+			Preload("HomeTeam.Players.PlayerStats", "game_id = ?", game.ID).
+			First(&games[i], game.ID).Error; err != nil {
+			return nil, err
+		}
+	}
+
 	return games, nil
+}
+
+func (r *GameRepository) UpsertGame(ctx context.Context, game domain.Game) error {
+	result := r.Tx.WithContext(ctx).Save(&game)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
 }

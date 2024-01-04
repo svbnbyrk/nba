@@ -20,3 +20,8 @@ type PlayerStat struct {
 	ThreePointAttempt int `json:"three_point_attemp" gorm:"three_point_attemp"`
 	ThreePointMade    int `json:"three_point_made" gorm:"three_point_made"`
 }
+
+type PlayerStatFilter struct {
+	GameID   int
+	PlayerID int
+}

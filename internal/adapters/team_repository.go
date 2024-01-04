@@ -9,6 +9,8 @@ import (
 
 type TeamRepositoryInterface interface {
 	UpsertTeamStat(ctx context.Context, teamStat domain.TeamStat) error
+	UpsertTeam(ctx context.Context, team domain.Team) error
+	GetTeamStat(ctx context.Context, filter domain.TeamStatFilter) (domain.TeamStat, error)
 }
 
 type TeamRepository struct {
@@ -25,6 +27,26 @@ func (r *TeamRepository) UpsertTeamStat(ctx context.Context, teamStat domain.Tea
 	if result.Error != nil {
 		return result.Error
 	}
-	println(result.RowsAffected)
 	return nil
+}
+
+func (r *TeamRepository) UpsertTeam(ctx context.Context, team domain.Team) error {
+	result := r.Tx.WithContext(ctx).Save(&team)
+
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+func (r *TeamRepository) GetTeamStat(ctx context.Context, filter domain.TeamStatFilter) (domain.TeamStat, error) {
+	var stat domain.TeamStat
+
+	result := r.Tx.WithContext(ctx).Where("game_id = ? AND team_id = ?", filter.GameID, filter.TeamID).First(&stat)
+
+	if result.Error != nil {
+		return stat, result.Error
+	}
+
+	return stat, nil
 }

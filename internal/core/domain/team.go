@@ -18,9 +18,14 @@ type Team struct {
 type TeamStat struct {
 	gorm.Model   `json:"-"`
 	ID           int  `json:"id" gorm:"id"`
+	Score        int  `json:"score" gorm:"score"`
+	TotalAttemps int  `json:"total_attemps" gorm:"total_attemps"`
 	GameID       int  `json:"-" gorm:"game_id"`
 	TeamID       int  `json:"-" gorm:"team_id"`
 	Team         Team `json:"-" gorm:"foreignKey:TeamID"`
-	Score        int  `json:"score" gorm:"score"`
-	TotalAttemps int  `json:"total_attemps" gorm:"total_attemps"`
+}
+
+type TeamStatFilter struct {
+	GameID int
+	TeamID int
 }
