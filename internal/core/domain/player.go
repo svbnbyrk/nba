@@ -21,6 +21,16 @@ type PlayerStat struct {
 	ThreePointMade    int `json:"three_point_made" gorm:"three_point_made"`
 }
 
+type PlayerAggregatedStat struct {
+	PlayerID               int     `json:"player_id" gorm:"column:player_id"`
+	TwoPointAttemptTotal   int     `json:"two_point_attempt_total" gorm:"column:two_point_attempt_total"`
+	TwoPointMadeTotal      int     `json:"two_point_made_total" gorm:"column:two_point_made_total"`
+	ThreePointAttemptTotal int     `json:"three_point_attempt_total" gorm:"column:three_point_attempt_total"`
+	ThreePointMadeTotal    int     `json:"three_point_made_total" gorm:"column:three_point_made_total"`
+	TwoPointPercentage     float64 `json:"two_point_percentage" gorm:"column:two_point_percentage"`
+	ThreePointPercentage   float64 `json:"three_point_percentage" gorm:"column:three_point_percentage"`
+}
+
 type PlayerStatFilter struct {
 	GameID   int
 	PlayerID int

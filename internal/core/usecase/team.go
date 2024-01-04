@@ -8,19 +8,23 @@ import (
 )
 
 type TeamUsecaseInterface interface {
-	GetScoreboard(ctx context.Context, week int) ([]domain.Game, error)
+	GetTeams(ctx context.Context, sortParam string) ([]domain.Team, error)
 }
 
 type TeamUsecase struct {
-	teamRepo   adapters.TeamRepositoryInterface
-	gameRepo   adapters.GameRepositoryInterface
-	playerRepo adapters.PlayerRepositoryInterface
+	teamRepo adapters.TeamRepositoryInterface
 }
 
-func NewTeamUsecase(teamRepo adapters.TeamRepositoryInterface, gameRepo adapters.GameRepositoryInterface, playerRepo adapters.PlayerRepositoryInterface) *TeamUsecase {
+func NewTeamUsecase(teamRepo adapters.TeamRepositoryInterface) *TeamUsecase {
 	return &TeamUsecase{
-		teamRepo:   teamRepo,
-		gameRepo:   gameRepo,
-		playerRepo: playerRepo,
+		teamRepo: teamRepo,
 	}
+}
+
+func (uc *TeamUsecase) GetTeams(ctx context.Context, sortParam string) ([]domain.Team, error) {
+	teams, err := uc.teamRepo.GetTeams(ctx, domain.TeamFilter{Sort: sortParam})
+	if err != nil {
+		return nil, err
+	}
+	return teams, nil
 }

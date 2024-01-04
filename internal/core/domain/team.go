@@ -11,8 +11,8 @@ type Team struct {
 	Abbreviation string     `json:"abbreviation" gorm:"abbreviation"`
 	Win          int        `json:"win" gorm:"win"`
 	Lose         int        `json:"lose" gorm:"lose"`
-	Players      []Player   `json:"players"`
-	TeamStats    []TeamStat `json:"stats"`
+	Players      []Player   `json:"players,omitempty"`
+	TeamStats    []TeamStat `json:"stats,omitempty"`
 }
 
 type TeamStat struct {
@@ -28,4 +28,7 @@ type TeamStat struct {
 type TeamStatFilter struct {
 	GameID int
 	TeamID int
+}
+type TeamFilter struct {
+	Sort string
 }

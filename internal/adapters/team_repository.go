@@ -11,6 +11,7 @@ type TeamRepositoryInterface interface {
 	UpsertTeamStat(ctx context.Context, teamStat domain.TeamStat) error
 	UpsertTeam(ctx context.Context, team domain.Team) error
 	GetTeamStat(ctx context.Context, filter domain.TeamStatFilter) (domain.TeamStat, error)
+	GetTeams(ctx context.Context, filter domain.TeamFilter) ([]domain.Team, error)
 }
 
 type TeamRepository struct {
@@ -49,4 +50,27 @@ func (r *TeamRepository) GetTeamStat(ctx context.Context, filter domain.TeamStat
 	}
 
 	return stat, nil
+}
+
+func (r *TeamRepository) GetTeams(ctx context.Context, filter domain.TeamFilter) ([]domain.Team, error) {
+	var teams []domain.Team
+
+	// Query builder başlangıç
+	query := r.Tx.WithContext(ctx)
+
+	// Filtre içindeki SortBy alanını kontrol et ve sıralamayı uygula
+	switch filter.Sort {
+	case "win.asc":
+		query = query.Order("win ASC")
+	case "win.desc":
+		query = query.Order("win DESC")
+	}
+
+	// Query'yi çalıştır
+	result := query.Find(&teams)
+	if result.Error != nil {
+		return teams, result.Error
+	}
+
+	return teams, nil
 }

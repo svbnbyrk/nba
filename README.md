@@ -32,16 +32,18 @@ Clone the repository:
 
 ## API Endpoints
 
-### 1. Simulate Games: `GET /v1/games/simulation`
-Query Parameters:
-- `week`: The week number to simulate games for.
+### Simulate Games: `POST /v1/games/simulation`
 
-Description:
-Simulates all games scheduled for the given week and provides real-time score updates.
+- Description: Initiates a simulation of all games scheduled for the given week, resulting in real-time score updates and changes to the game, team, and player statistics.
+
+- Payload Parameters:
+  - `week`: The week number to simulate games for.
+
+Initiates the simulation process for all games in the specified week. This endpoint creates or modifies resources representing the games' outcomes and should be used to trigger a new simulation.
 
 ---
 
-### 2. Retrieve Schedule: `GET /v1/games/schedule`
+### 2. Retrieve Schedule: `GET /v1/games`
 Query Parameters:
 - `week`: The week number to retrieve the schedule for.
 
@@ -50,14 +52,15 @@ Retrieves the game schedule for the specified week.
 
 ---
 
-### 3. Team Standings: `GET /v1/teams/standings`
-
+### 3. Team Standings: `GET /v1/teams`
+Query Parameters:
+- `sort`: Send spesific sort parameter for a lose and win field example: lose.asc
 Description:
 Retrieves the current standings of all teams, sorted by wins and other criteria.
 
 ---
 
-### 4. Player Statistics: `GET /v1/players/stats`
+### 4. Player Statistics: `GET /v1/players`
 
 Description:
 Provides detailed statistics for each player, including points, attempts, and other relevant metrics.
