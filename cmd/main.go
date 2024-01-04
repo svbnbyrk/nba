@@ -34,13 +34,16 @@ func main() {
 	playerRepo := adapters.NewPlayerRepository(database)
 	simulationUsecase := usecase.NewSimulationUsecase(teamRepo, gameRepo, playerRepo)
 	gameUsecase := usecase.NewGameUsecase(gameRepo)
-	//teamUsecase := usecase.NewTeamUsecase()
+	teamUsecase := usecase.NewTeamUsecase(teamRepo)
+	playerUsecase := usecase.NewPlayerUsecase(playerRepo)
 
 	e := echo.New()
 	e = ports.SetupMiddleware(e)
 
-	e.GET("/v1/simulate", ports.SimulateHandler(simulationUsecase))
-	e.GET("v1/schedule", ports.GetGameScheduleHandler(gameUsecase))
+	e.POST("/v1/games/simulate", ports.SimulateHandler(simulationUsecase))
+	e.GET("v1/games", ports.GetGameScheduleHandler(gameUsecase))
+	e.GET("v1/teams", ports.GetTeamsHandler(teamUsecase))
+	e.GET("v1/players", ports.GetPlayersHandler(playerUsecase))
 	// setup http server
 	httpServer := http.New(e)
 
