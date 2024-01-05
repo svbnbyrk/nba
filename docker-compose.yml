@@ -1,20 +1,30 @@
-version: '3.1'
-
+version: '3.9'
 services:
-  mongodb:
-    image: mongo:latest
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: 123456
-    ports:
-      - "27017:27017"
-    volumes:
-      - ./data:/data/db
-      - ./data.json:/data.json
-      - ./init.sh:/docker-entrypoint-initdb.d/init.sh
 
-  mongo-seed:
-    image: mongo:latest
-    command: sh -c 'mongoimport --host mongodb --db nba --collection teams --type json --file /data.json --jsonArray'
+  postgres-wallet:
+    container_name: postgres-nba
+    image: postgres:14
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_HOST: 'postgres'
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'postgres'
+      POSTGRES_DB: 'postgres'
+    ports:
+      - 5432:5432
+
+  app:
+    build: .
+    container_name: app
+    image: app
+    environment:
+      PG_URL: 'postgres-nba://postgres:postgres@postgres:5432/postgres'
+      GIN_MODE: release
+    ports:
+      - 8080:8080
     depends_on:
-      - mongodb
+      - postgres-nba
+
+volumes:
+  pg-data:
